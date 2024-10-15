@@ -527,6 +527,9 @@ def sample_random_requests(
             else:
                 ratio = (input_lens[i] + prompt_len - 1) // prompt_len
                 input_ids = (prompt_token_ids * ratio)[: input_lens[i]]
+
+            # To prevent prefix caching
+            input_ids[0:128] = range(i, i + 128)
             prompt = tokenizer.decode(input_ids)
             input_requests.append((prompt, int(input_lens[i]), int(output_lens[i])))
     else:
