@@ -103,6 +103,9 @@ class RadixCache(BasePrefixCache):
         """Cache request when it finishes."""
         if token_ids is None:
             token_ids = (req.origin_input_ids + req.output_ids)[:-1]
+
+        # print(f"cache_finished_req {token_ids=}, {free_delta=}")
+
         kv_indices = self.req_to_token_pool.req_to_token[
             req.req_pool_idx, : len(token_ids)
         ]
@@ -114,6 +117,7 @@ class RadixCache(BasePrefixCache):
 
         # Radix Cache takes one ref in memory pool
         new_prefix_len = self.insert(token_ids, kv_indices.clone())
+        print(f"{len(req.prefix_indices)=}, {new_prefix_len=}")
         self.token_to_kv_pool.free(
             kv_indices[len(req.prefix_indices) : new_prefix_len + free_delta]
         )
@@ -129,6 +133,8 @@ class RadixCache(BasePrefixCache):
 
         if token_ids is None:
             token_ids = req.fill_ids
+
+        # print(f"cache_unfinished_req {token_ids=}")
 
         kv_indices = self.req_to_token_pool.req_to_token[
             req.req_pool_idx, : len(token_ids)

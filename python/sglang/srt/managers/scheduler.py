@@ -296,14 +296,14 @@ class Scheduler:
             batch = self.get_next_batch_to_run()
             self.cur_batch = batch
             if batch:
-                # logger.info(f"Run batch {str(batch)} begin")
+                logger.info(f"Run batch {str(batch)} begin")
                 result = self.run_batch(batch)
                 result_queue.put((batch.copy(), result))
                 # logger.info(f"Run batch {str(batch)} end")
 
             if self.last_batch:
                 tmp_batch, tmp_result = result_queue.get()
-                # logger.info(f"Process batch {str(tmp_batch)} begin")
+                logger.info(f"Process batch {str(tmp_batch)} begin")
                 self.process_batch_result(tmp_batch, tmp_result)
                 # logger.info(f"Process batch {str(tmp_batch)} end")
             elif batch is None:
@@ -1054,7 +1054,7 @@ class Scheduler:
             logger.info("Cache flushed successfully!")
             if_success = True
         else:
-            logging.warning(
+            logger.warning(
                 f"Cache not flushed because there are pending requests. "
                 f"#queue-req: {len(self.waiting_queue)}, "
                 f"#running-req: {0 if self.running_batch is None else len(self.running_batch.reqs)}"

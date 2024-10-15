@@ -174,6 +174,7 @@ class TpModelWorker:
                 self.acc_time_without_waiting += time.time() - tic2
 
                 if self.forward_queue.qsize() == 0:
+                    continue
                     print(
                         f"{self.acc_time_with_waiting=:.3f}, {self.acc_time_without_waiting=:.3f}, {self.forward_queue.qsize()=}"
                     )
