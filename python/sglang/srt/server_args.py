@@ -309,6 +309,8 @@ class ServerArgs:
     show_time_cost: bool = False
     enable_metrics: bool = False
     enable_metrics_for_all_schedulers: bool = False
+    metrics_events_port: Optional[int] = None
+    metrics_dp_router_port: Optional[int] = None
     tokenizer_metrics_custom_labels_header: str = "x-custom-labels"
     tokenizer_metrics_allowed_custom_labels: Optional[List[str]] = None
     bucket_time_to_first_token: Optional[List[float]] = None
@@ -669,6 +671,9 @@ class ServerArgs:
 
         # Handle exporting request-level metrics.
         self._handle_request_metrics_exporters()
+
+        # Handle metrics events configurations.
+        self._handle_metrics_events()
 
         # Handle diffusion LLM inference.
         self._handle_dllm_inference()
@@ -2007,6 +2012,17 @@ class ServerArgs:
                 "--export-metrics-to-file-dir is required when --export-metrics-to-file is enabled"
             )
 
+    def _handle_metrics_events(self):
+        """Handle arguments for configuring metrics events."""
+        if self.metrics_events_port is None:
+            return
+        if self.dp_size > 1 and self.metrics_dp_router_port is None:
+            self.metrics_dp_router_port = self.metrics_events_port + 1
+            logger.info(
+                "Setting metrics router port to %d, you may override this by using --metrics-dp-router-port",
+                self.metrics_dp_router_port
+            )
+
     def _handle_dllm_inference(self):
         if self.dllm_algorithm is None:
             return
@@ -2539,6 +2555,18 @@ class ServerArgs:
             help="Enable --enable-metrics-for-all-schedulers when you want schedulers on all TP ranks (not just TP 0) "
             "to record request metrics separately. This is especially useful when dp_attention is enabled, as "
             "otherwise all metrics appear to come from TP 0.",
+        )
+        parser.add_argument(
+            "--metrics-events-port",
+            type=int,
+            default=ServerArgs.metrics_events_port,
+            help="The port for metrics events.",
+        )
+        parser.add_argument(
+            "--metrics-dp-router-port",
+            type=int,
+            default=ServerArgs.metrics_dp_router_port,
+            help="The port for dp ranks exchange metrics data though rank 0.",
         )
         parser.add_argument(
             "--tokenizer-metrics-custom-labels-header",

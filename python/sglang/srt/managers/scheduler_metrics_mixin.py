@@ -12,6 +12,7 @@ from sglang.srt.managers.io_struct import GetLoadReqInput, GetLoadReqOutput
 from sglang.srt.managers.schedule_policy import PrefillAdder
 from sglang.srt.managers.scheduler import Req, ScheduleBatch
 from sglang.srt.metrics.collector import SchedulerMetricsCollector, SchedulerStats
+from sglang.srt.metrics.events import MetricsEventPublisher
 from sglang.srt.utils import get_bool_env_var
 
 if TYPE_CHECKING:
@@ -70,6 +71,14 @@ class SchedulerMetricsMixin:
             if dp_rank is not None:
                 labels["dp_rank"] = dp_rank
             self.metrics_collector = SchedulerMetricsCollector(labels=labels)
+            if self.server_args.metrics_events_port is not None:
+                self.metrics_sender = MetricsEventPublisher(
+                    port=self.server_args.metrics_events_port,
+                    dp_rank=dp_rank,
+                    dp_router_port=self.server_args.metrics_dp_router_port,
+                    leader_host="127.0.0.1" if self.server_args.nnodes == 1 else
+                    self.server_args.dist_init_addr.split(":")[0],
+                )
 
     def init_kv_events(self: Scheduler, kv_events_config: Optional[str]):
         if self.enable_kv_cache_events:
@@ -202,6 +211,7 @@ class SchedulerMetricsMixin:
             # Others
             self.calculate_utilization()
             self.metrics_collector.log_stats(self.stats)
+            self.metrics_sender.send(self.stats)
             self._emit_kv_metrics()
         self._publish_kv_events()
 
@@ -352,6 +362,7 @@ class SchedulerMetricsMixin:
             # Others
             self.calculate_utilization()
             self.metrics_collector.log_stats(self.stats)
+            self.metrics_sender.send(self.stats)
             self._emit_kv_metrics()
         self._publish_kv_events()
 
