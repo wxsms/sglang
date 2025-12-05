@@ -14,7 +14,7 @@ class MetricsEventPublisher:
         self.ctx = zmq.Context()
         self.dp_rank = dp_rank
         self._router_thread = None
-        self._router_top = threading.Event()
+        self._router_stop = threading.Event()
 
         if dp_rank == 0:
             self.metrics_pub = self.ctx.socket(zmq.PUB)
@@ -23,7 +23,7 @@ class MetricsEventPublisher:
             if dp_router_port is not None:
                 self.metrics_dp_router = self.ctx.socket(zmq.ROUTER)
                 self.metrics_dp_router.bind(f"tcp://*:{dp_router_port}")
-                logger.info(f"Metrics ZMQ DP router initialized on port {dp_router_port}")
+                logger.debug(f"Metrics ZMQ DP router initialized on port {dp_router_port}")
                 self._router_thread = threading.Thread(target=self._router_proxy_thread, daemon=True)
                 self._router_thread.start()
         else:
@@ -34,7 +34,7 @@ class MetricsEventPublisher:
             self.metrics_dp_router.connect(f"tcp://{leader_host}:{dp_router_port}")
 
     def destroy(self) -> None:
-        self._router_top.set()
+        self._router_stop.set()
         self._router_thread.join()
 
     def send(self, stats: SchedulerStats):
@@ -47,7 +47,7 @@ class MetricsEventPublisher:
             self.metrics_dp_router.send_json(msg)
 
     def _router_proxy_thread(self):
-        while not self._router_top.is_set():
+        while not self._router_stop.is_set():
             try:
                 if self.metrics_dp_router.poll(1000):
                     _, message = self.metrics_dp_router.recv_multipart()
